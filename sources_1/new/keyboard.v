@@ -72,7 +72,7 @@ module keyboard(input clk_100mhz,
             buffer <= {ps2_d_f, buffer[10:2]};//后读入的为高位
             if (counter == 10) begin//buffer为10位数据
                 // if (buffer[20:13] != 8'b11110000) begin//
-                if(^buffer[9:2]==buffer[10])//检验奇偶
+                if(^buffer[9:2]==~buffer[10])//检验奇偶
                     if (buffer[9:2] == 8'b11110000) begin//F0代表按键松开
                         key_event[8] <= 1;//key_event[8]==1代表松开该按键
                     end 

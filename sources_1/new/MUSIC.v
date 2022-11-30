@@ -4,11 +4,11 @@ module MUSIC(
     input rstn,            
     output reg B
 );
-    reg [25:1]t;
+    reg [24:1]t;
     reg clk_out;
     always@(posedge clk,negedge rstn)
-        if(~rstn) begin clk_out<=0;t<=25000000; end
-        else if(t==0) begin clk_out<=~clk_out;t<=25000000; end
+        if(~rstn) begin clk_out<=0;t<=12500000; end
+        else if(t==0) begin clk_out<=~clk_out;t<=12500000; end
         else begin t<=t-1; end
 
 
@@ -138,7 +138,7 @@ module MUSIC(
             if(p==q-1) p<=0;
             else p<=p+1;
             if(p==0) B<=1;
-            if(p==q/1024) B<=0;
+            if(p==q/256) B<=0;
         end
     end 
 
