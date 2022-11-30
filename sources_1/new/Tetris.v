@@ -1,8 +1,8 @@
 module Tetris(
     input clk, rstn,
     input PS2_CLK,PS2_DATA,
-    input [3:0]SW,
-    output hs, vs, [11:0]rgb
+    output hs, vs, pwm, [11:0]rgb,
+    output reg start
 );
 
     wire [10:0] key_event;
@@ -14,9 +14,9 @@ module Tetris(
         .key_event(key_event)
     );  
 
-    reg t,w1,a1,s1,d1,w2,a2,s2,d2,start;
+    reg t,w1,a1,s1,d1,w2,a2,s2,d2,music;
     always @(posedge clk,negedge rstn) begin
-        if(~rstn) begin t<=1;w1<=0;a1<=0;s1<=0;d1<=0;w2<=0;a2<=0;s2<=0;d2<=0;start<=0; end
+        if(~rstn) begin t<=1;w1<=0;a1<=0;s1<=0;d1<=0;w2<=0;a2<=0;s2<=0;d2<=0;start<=0;music<=0; end
         else if (key_event[10]&!key_event[8]&t) begin//按键有效+丝是松开
             case (key_event[7:0]) 
                 8'h1D: begin w1<=1; end//W
@@ -27,8 +27,8 @@ module Tetris(
                 8'h6B: if (key_event[9]) begin a2<=1; end//�?
                 8'h72: if (key_event[9]) begin s2<=1; end//�?
                 8'h74: if (key_event[9]) begin d2<=1; end//�?
-                8'h3A: begin  end//M
-                8'h4D: begin start<=0; end//P
+                8'h3A: begin if (music) music<=0; else music<=1; end//M
+                8'h4D: begin start<=0; end//P pause
                 8'h29: begin start<=1; end//space
                 8'h76: begin  end//esc
                 8'h5A: begin  end//enter
@@ -36,13 +36,18 @@ module Tetris(
             t<=0;
         end
         else begin 
-            t<=1;w1<=0;a1<=0;s1<=0;d1<=0;w2<=0;a2<=0;s2<=0;d2<=0;start<=0;
+            t<=1;w1<=0;a1<=0;s1<=0;d1<=0;w2<=0;a2<=0;s2<=0;d2<=0;start<=0;music<=0;
         end
     end
 
+    reg [4:1]sw;
+    always @(posedge clk,negedge rstn) begin
+        if(~rstn) sw<=0;
+        else if(~start&(w2||w1)) sw<=sw+1;
+    end
     wire [16:1]timer;
     TIMER TIMER(
-        .sw(SW),
+        .sw(sw),
         .start(start),
         .timer(timer),
         .clk(clk),
@@ -57,55 +62,55 @@ module Tetris(
 
     wire [8:1]score1,score2,raddr1,raddr2;
     wire [5:1]rdata1,rdata2;
-//    RAM ram1(
-//        .score(score1),
-//        .rdata(rdata1),
-//        .raddr(raddr1)
-//    );
+    RAM ram1(
+        .score(score1),
+        .rdata(rdata1),
+        .raddr(raddr1)
+    );
 
-//    RAM ram2(
-//        .score(score2),
-//        .rdata(rdata2),
-//        .raddr(raddr2)
-//    );
+    RAM ram2(
+        .score(score2),
+        .rdata(rdata2),
+        .raddr(raddr2)
+    );
     
     wire [5:1]x1,y1,type1;
     wire [3:1]next1;
     wire refresh1;
-//    player player1(
-//        .clk        (clk),
-//        .rstn       (rstn),
-//        .space      (start),
-//        .up         (w1),
-//        .down       (s1),
-//        .left       (a1),
-//        .right      (d1),
-//        .x          (x1),
-//        .y          (y1),
-//        .refresh    (refresh1),
-//        .type       (type1[5:3]),
-//        .dir        (type1[2:1]),
-//        .next       (next1)
-//    );
+    player player1(
+        .clk        (clk),
+        .rstn       (rstn),
+        .space      (start),
+        .up         (w1),
+        .down       (s1),
+        .left       (a1),
+        .right      (d1),
+        .x          (x1),
+        .y          (y1),
+        .refresh    (refresh1),
+        .type       (type1[5:3]),
+        .dir        (type1[2:1]),
+        .next       (next1)
+    );
 
     wire [5:1]x2,y2,type2;
     wire [3:1]next2;
     wire refresh2;
-//    player player2(
-//        .clk        (clk),
-//        .rstn       (rstn),
-//        .space      (start),
-//        .up         (w2),
-//        .down       (s2),
-//        .left       (a2),
-//        .right      (d2),
-//        .x          (x2),
-//        .y          (y2),
-//        .refresh    (refresh2),
-//        .type       (type2[5:3]),
-//        .dir        (type2[2:1]),
-//        .next       (next2)
-//    );
+    player player2(
+        .clk        (clk),
+        .rstn       (rstn),
+        .space      (start),
+        .up         (w2),
+        .down       (s2),
+        .left       (a2),
+        .right      (d2),
+        .x          (x2),
+        .y          (y2),
+        .refresh    (refresh2),
+        .type       (type2[5:3]),
+        .dir        (type2[2:1]),
+        .next       (next2)
+    );
 
 
     wire hen,ven;
@@ -139,5 +144,13 @@ module Tetris(
         .raddr1(raddr1),
         .raddr2(raddr2),
         .rgb(rgb)
+    );
+
+
+    MUSIC MUSIC(
+        .clk(clk),
+        .start(music),
+        .rstn(rstn),            
+        .B(pwm)
     );
 endmodule
