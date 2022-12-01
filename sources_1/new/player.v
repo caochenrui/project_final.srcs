@@ -1,52 +1,74 @@
 module player(
-    input clk, rstn, space, enter, exc,
+    input clk, rstn, start,
     input up, down, left, right,
-    input drop,
+    input refresh_done,
+    input eu, ed, el, er, edrop, overflow,
     output reg [4:0]x, y,
     output reg [2:0]type,
-    output reg [1:0]dir
+    output reg [1:0]dir,
+    output reg fail, refresh,
+    output reg next_type
 );
-//    reg []
-//    reg next_type;
-//    reg next_dir;
-//    reg next_x;
-//    reg next_y;
-//    wire overflow;
-//    wire el, er, eu, ed;
-//    integer i, j;
-//    wire [4:0]x1, x2, x3, x4, y1, y2, y3, y4;//为四个块在图中坐�?
-//    always @(posedge clk) begin
-//        if(!drop)begin
-//            if()begin
-//                if(溢出)begin
-                    
-                
-//                end
-//                else begin
+    reg next_dir;
+    reg next_x;
+    reg next_y;
+    reg mode;//速降模式和普通模式
 
-//                end
-//            end
-//            else begin
-//                y=y+1;
-//            end//下落�?�?
-//        end
-//        else begin
-//            if(up)begin
-//                dir<=(dir==3)?0:(dir+1);
-//            end
-//            if(down)begin
-//                速降
-//            end
-//            if(left & x > 0)begin
-//                x <= x - 1 ;
-//            end
-//            if(right & x < 9)begin
-//                x <= x + 1;
-//            end
-//        end
-//    end
+    reg drop, fast_drop;
+    always @(posedge clk)begin
+        fail <= fail;
+        refresh <= 0;
+        x <= x;
+        y <= y;
+        type <= type;
+        dir <= dir;
+        mode <= mode;
+        next_type <= $random() % 8;
+        next_dir <= 0;
+        // next_dir <= dir + 1;//后面得改，先用这个试试 
 
-
-
-
+        if(start)begin
+            drop <= (drop == 100000000) ?(drop + 1):0;
+            fast_drop <= (drop == 50000000) ?(fast_drop + 1):0;
+        end
+        if((mode) ? (fast_drop) : (drop))begin//mode为1：快速下落使能
+            if(!edrop)begin//如果不能下落
+                mode <= 0;
+                if(overflow)begin//如果溢出
+                    fail <= 1;
+                end
+                else begin//否则刷新底部块
+                    refresh <= 1;
+                end
+            end
+            else begin
+                y <= y + 1;//正常下落
+            end//下落一格
+        end
+        else begin
+            if(refresh_done)begin//底部刷新完成
+                x <= 3;
+                y <= 0;
+                type <= next_type;
+                dir <= next_dir;
+                mode <= 0;
+            end
+            if(up & eu)begin
+                dir <= (dir == 3) ? 0 :(dir + 1);
+            end
+            if(down & ed)begin
+                mode <= 1;
+            end
+            if(left & el)begin
+                x <= x - 1 ;
+            end
+            if(right & er)begin
+                x <= x + 1;
+            end
+        end
+        if(!rstn)begin
+            refresh <= 0;
+            fail <= 0;
+        end
+    end
 endmodule
