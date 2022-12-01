@@ -33,7 +33,6 @@ module player(
         end
         if((mode) ? (fast_drop) : (drop))begin//mode为1：快速下落使能
             if(!edrop)begin//如果不能下落
-                mode <= 0;
                 if(overflow)begin//如果溢出
                     fail <= 1;
                 end
@@ -54,7 +53,7 @@ module player(
                 mode <= 0;
             end
             if(up & eu)begin
-                dir <= (dir == 3) ? 0 :(dir + 1);
+                dir <= dir + 1;
             end
             if(down & ed)begin
                 mode <= 1;

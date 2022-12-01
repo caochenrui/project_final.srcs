@@ -97,8 +97,8 @@ module RAM(
         REFRESH: begin
             if(eref)begin//如果当前排满了
                 cnt_score = cnt_score + 1;
-                for(i = 199 - 10*ref;i >= 10;i = i - 1) rdata_ALL[i] = rdata_ALL[i-10];
-                //for(i = 0;i < 10;i = i + 1) rdata_ALL[i] = 12'hfff;//置为0
+                for(i = 199 - 10*(19-ref);i >= 10;i = i - 1) rdata_ALL[i] = rdata_ALL[i-10];
+                for(i = 0;i < 10;i = i + 1) rdata_ALL[i] = 12'hfff;//置为0
             end
         end
         endcase
@@ -390,10 +390,10 @@ module RAM(
             end
     end
     
-    always @(*) begin
-        assign rd[0]=rdata_ALL[ra0];
-        assign rd[1]=rdata_ALL[ra1];
-    end
+   // always @(*) begin
+    //    assign rd[0]=rdata_ALL[ra0];
+    //    assign rd[1]=rdata_ALL[ra1];
+   // end
 
 endmodule
 
