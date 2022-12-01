@@ -1,29 +1,21 @@
 module RAM(
     input clk, rstn,
     input refresh,
-    input [7:0]ra0, [7:0]ra1,//rd0是显示时要读取的地址，用ra0输出
+    input [7:0]ra,//rd0是显示时要读取的地址，用ra0输出
     input [4:0]x, y,
     //input [11:0]clo,//方块除坐标外还有颜色信息 这个是什么？
     input [2:0]type,
     input [1:0]dir,
-    output [2:0]rd0, [2:0]rd1,
+    output reg [2:0]rd,//rd0给显示模块
+    output reg [8:1]score,
     output reg el, er, eu, ed, edrop, overflow, refresh_done
 );
 
+    
 
-
-    //a是写入，b是读出
     reg [2:0]rdata_ALL [199:0];//200个数据点，每个数据点12位存储RGB 为空时存储fff(黑色000)
-    //写入的使能信号
-
-    /*返回显示所需的数据，根据IP核写
-    always@(*) 
-    */
     
-    
-    reg we_done = 1'b0;//标志已经全部写入，真正可以进行刷新判断
-    
-    integer k = 0;
+    always@(*) rd = rdata_ALL[ra];
 
     reg [4:0]m1[0:27];
     reg [4:0]m2[0:27];
@@ -37,148 +29,86 @@ module RAM(
     reg [4:0]ux1, ux2, ux3, ux4, uy1, uy2, uy3, uy4;
     
 
-    reg en;//标志已经写入了
-    reg en2;//标志应该删除十位数据
-    reg we;//标志写入四个新的方块
-    always@(posedge clk)begin
-       if(refresh) begin
-          we_done <= 1'b0;
-          we <= 1'b1;
-          en <= 1'b0;
-       end
-       else ;
-
-       if(!we_done)begin
-           if(we)begin
-           rdata_ALL[y1*10 + x1] <= type;
-           rdata_ALL[y2*10 + x2] <= type;
-           rdata_ALL[y3*10 + x3] <= type;
-           rdata_ALL[y4*10 + x4] <= type;
-           end
-           we_done <= 1'b1;
-           we <= 1'b0;
-           en <= 1'b1;
-       end
-    end
-  
-    
-    /*
-    always@(posedge clk)begin//这里可以直接@(*)吗
-      if(we_done && !en)begin//refresh信号有效 且新的方块已经写入
-          if(i==199) en = 1'b1;
-          else en = 1'b0;
-          raddr <= i;
-          rdata_ALL[i] <= rdata;
-          i <= i + 1;
-      end
-      else begin
-        i <= 0;
-        en = 1'b0;
-      end
-    end
-    */
-    //读出了200个数据 最底层的数据存储在最后面的几个
-
-    always@(*)begin
-    if(en)begin
-       if(rdata_ALL[199]!=12'hfff&&
-          rdata_ALL[198]!=12'hfff&&
-          rdata_ALL[197]!=12'hfff&&
-          rdata_ALL[196]!=12'hfff&&
-          rdata_ALL[195]!=12'hfff&&
-          rdata_ALL[194]!=12'hfff&&
-          rdata_ALL[193]!=12'hfff&&
-          rdata_ALL[192]!=12'hfff&&
-          rdata_ALL[191]!=12'hfff&&
-          rdata_ALL[190]!=12'hfff)
-          en2 = 1'b1;
-        else en2 = 1'b0;
-    end
-    else en2 = 1'b0;
-    end
-
-    
-
-    always@(*)begin
-    if(en2)begin//说明已经完成了读取
-       begin//不能直接移位
-              for(i = 199;i >= 10;i = i - 1) rdata_ALL[i] = rdata_ALL[i-10];
-              for(i = 0;i < 10;i = i + 1) rdata_ALL[i] = 12'hfff;//置为0
-          end
-    end
-    end
-
 
     reg [2:0]CS;
     reg [2:0]NS;
     reg [4:0]ref, next_ref;
     wire eref;
-    assign eref = ((|rdata_ALL[y * 10 + 9])&
-                   (|rdata_ALL[y * 10 + 8])&
-                   (|rdata_ALL[y * 10 + 7])&
-                   (|rdata_ALL[y * 10 + 6])&
-                   (|rdata_ALL[y * 10 + 5])&
-                   (|rdata_ALL[y * 10 + 4])&
-                   (|rdata_ALL[y * 10 + 3])&
-                   (|rdata_ALL[y * 10 + 2])&
-                   (|rdata_ALL[y * 10 + 1])&
-                   (|rdata_ALL[y * 10 + 0]));//当前排是否可消除
+    assign eref = ((|rdata_ALL[ref * 10 + 9])&
+                   (|rdata_ALL[ref * 10 + 8])&
+                   (|rdata_ALL[ref * 10 + 7])&
+                   (|rdata_ALL[ref * 10 + 6])&
+                   (|rdata_ALL[ref * 10 + 5])&
+                   (|rdata_ALL[ref * 10 + 4])&
+                   (|rdata_ALL[ref * 10 + 3])&
+                   (|rdata_ALL[ref * 10 + 2])&
+                   (|rdata_ALL[ref * 10 + 1])&
+                   (|rdata_ALL[ref * 10 + 0]));//当前排是否可消除,若可消除，则为1
     parameter IDLE = 3'b000,
               GETIN = 3'b001,
-              REFRESH = 3'b010,
-              S4 = 3'b011;
+              REFRESH = 3'b010;
+              //S4 = 3'b011;
     
 
     always @(posedge clk)begin
         CS <= NS;
+        ref <= next_ref;
     end
     
-    always @(*)begin
-    NS = CS;
-    next_ref = ref; 
+    always @(posedge clk)begin
+    NS <= CS;
+    next_ref <= ref; 
+    refresh_done <= 0;
     case(CS)
         IDLE:begin
-           if(refresh) NS = GETIN;
+           if(refresh) NS <= GETIN;
         end
         GETIN:begin
           NS <= REFRESH;
+        end
         REFRESH: begin
-          if(!eref)begin//最后一排满了
-            if(!ref)begin
-                next_ref = 19;
-                NS = IDLE;
-            end
-            else begin
+         if(!ref)begin
+             next_ref <= 19;
+             NS <= IDLE;
+             refresh_done <= 1;
+         end
+         else begin
+            if(!eref)begin//最后一排满了
                 next_ref = ref - 1;
             end
-          end
-          else begin
-          end
-        end
-
+         end
         end
     endcase
     end
     
     integer i = 0;
-    
+    reg [6:0]cnt_score;
     always @(*)begin
+        //cnt_score = cnt_ score;
         case(CS)
-        IDLE: refresh_done <= 1;
+        IDLE: ;
         GETIN: begin
-           rdata_ALL[y1*10 + x1] <= clo;
-           rdata_ALL[y2*10 + x2] <= clo;
-           rdata_ALL[y3*10 + x3] <= clo;
-           rdata_ALL[y4*10 + x4] <= clo;
-           ref <= 19;
+           rdata_ALL[y1*10 + x1] = type;
+           rdata_ALL[y2*10 + x2] = type;
+           rdata_ALL[y3*10 + x3] = type;
+           rdata_ALL[y4*10 + x4] = type;
+           ref = 19;
         end
         REFRESH: begin
-            for(i = 199;i >= 10;i = i - 1) rdata_ALL[i] = rdata_ALL[i-10];
-            for(i = 0;i < 10;i = i + 1) rdata_ALL[i] = 12'hfff;//置为0
+            if(eref)begin//如果当前排满了
+                cnt_score = cnt_score + 1;
+                for(i = 199 - 10*ref;i >= 10;i = i - 1) rdata_ALL[i] = rdata_ALL[i-10];
+                //for(i = 0;i < 10;i = i + 1) rdata_ALL[i] = 12'hfff;//置为0
+            end
         end
         endcase
     end
-
+    
+    
+    always @(*) begin
+        score[4:1]=(cnt_score)%10;
+        score[8:5]=(cnt_score)/10;
+    end
 
 
 
@@ -459,6 +389,12 @@ module RAM(
             n4[27] <= 2;//第七排
             end
     end
+    
+    always @(*) begin
+        assign rd[0]=rdata_ALL[ra0];
+        assign rd[1]=rdata_ALL[ra1];
+    end
+
 endmodule
 
 

@@ -1,12 +1,12 @@
 module player(
     input clk, rstn, start,
     input up, down, left, right,
-    input refresh_done,
+    input refresh_done,//底部块消除完成标志
     input eu, ed, el, er, edrop, overflow,
-    output reg [4:0]x, y,
+    output reg [4:0]x, y,//当前块坐标
     output reg [2:0]type,
     output reg [1:0]dir,
-    output reg fail, refresh,
+    output reg fail, refresh,//fail为失败信号，refresh控制RAM开始刷新，1有效，脉冲信号。
     output reg next_type
 );
     reg next_dir;
@@ -14,7 +14,7 @@ module player(
     reg next_y;
     reg mode;//速降模式和普通模式
 
-    reg drop, fast_drop;
+    reg [10:0]drop, fast_drop;
     always @(posedge clk)begin
         fail <= fail;
         refresh <= 0;
@@ -23,7 +23,7 @@ module player(
         type <= type;
         dir <= dir;
         mode <= mode;
-        next_type <= $random() % 8;
+        next_type <= $random() % 7+1;//1~7
         next_dir <= 0;
         // next_dir <= dir + 1;//后面得改，先用这个试试 
 
@@ -43,8 +43,8 @@ module player(
             end
             else begin
                 y <= y + 1;//正常下落
-            end//下落一格
-        end
+            end
+        end//块下落
         else begin
             if(refresh_done)begin//底部刷新完成
                 x <= 3;

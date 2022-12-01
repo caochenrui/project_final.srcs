@@ -17,7 +17,7 @@ module TIMER(
     always @(*) begin
         timer[16:13]=timerr/600;
         timer[12:9]=(timerr/60)%10;
-        timer[4:1]=(timerr%60)/10;
-        timer[8:5]=(timerr%60)%10;
+        timer[8:5]=(timerr%60)/10;
+        timer[4:1]=(timerr%60)%10;
     end
 endmodule
