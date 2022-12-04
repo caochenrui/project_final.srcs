@@ -12,22 +12,20 @@ module RAM(
     output reg [4:0]x1,
     output reg [4:0]x2,
     output reg [4:0]x3,
-    output reg [4:0]x4,//当前四个方块的xy坐标（xi,yi）
+    output reg [4:0]x4,
     output reg [4:0]y1,
     output reg [4:0]y2,
     output reg [4:0]y3,
-    output reg [4:0]y4,
+    output reg [4:0]y4,//当前四个方块的xy坐标（xi,yi）
     output reg [3:0]cnt_boom
 );
     
     
     //额外操作1 boom
     integer i = 0;
-    reg enboom;
     reg [2:0]rdata_ALL [199:0];//200个数据点，每个数据点12位存储RGB 为空时存储fff(黑色000)
 
-    
-    reg [6:0]cnt_score_acc;//累计得分，用于计算道具个数
+    //累计得分，用于计算道具个数
     //  always@(posedge clk)begin
     //     if(cnt_score_acc >= 10) begin
     //        cnt_boom <= cnt_boom + 1;
@@ -36,8 +34,6 @@ module RAM(
     //  end
     // //
 
-    
-    
     always@(*) rd = rdata_ALL[ra];
 
     reg [4:0]m1[0:31];
@@ -51,9 +47,6 @@ module RAM(
     //reg [4:0]x1, x2, x3, x4, y1, y2, y3, y4;
     reg [4:0]ux1, ux2, ux3, ux4, uy1, uy2, uy3, uy4;
     
-
-
-
     reg [2:0]CS;
     reg [2:0]NS;
     reg [4:0]ref, next_ref;
@@ -67,17 +60,16 @@ module RAM(
                    (|rdata_ALL[ref * 10 + 3])&
                    (|rdata_ALL[ref * 10 + 2])&
                    (|rdata_ALL[ref * 10 + 1])&
-                   (|rdata_ALL[ref * 10 + 0]));//当前排是否可消除,若可消除，则为1
+                   (|rdata_ALL[ref * 10 + 0]));//ref排是否可消除,若可消除，则为1
     parameter IDLE = 3'b000,
               GETIN = 3'b001,
               REFRESH = 3'b010,
               WAIT = 3'b011;
     
-
+    //状态机，控制消除和炸弹功能
     always @(posedge clk)begin
         CS <= NS;
     end
-    
     always @(*)begin
     NS = CS;
     case(CS)
@@ -102,26 +94,23 @@ module RAM(
     always @(posedge clk)begin
         refresh_done <= 0;
         cnt_score <= cnt_score;
-        cnt_score_acc <= cnt_score_acc;
         if(!rstn)begin
             ref <= 19;
             cnt_score <= 0;
-            cnt_boom <= 5;
+            cnt_boom <= 3;
             for(i = 0; i < 200;i = i + 1)
                 rdata_ALL[i] <= 0;
         end
         else begin
             case(CS)
             IDLE: begin
-            enboom <= 1'b1;
-            if(boom && enboom && (cnt_boom > 0))begin//消去最下层的三行
-               for(i = 199 ; i >= 30 ; i = i - 1) rdata_ALL[i] <= rdata_ALL[i-30];
-               for(i = 0   ; i < 30  ; i = i + 1) rdata_ALL[i] <= 3'b000;//置为0
+            if(boom && (cnt_boom > 0))begin//消去最下层的三行
+               for(i = 199 ; i >= 10 ; i = i - 1) rdata_ALL[i] <= rdata_ALL[i-10];
+               for(i = 0   ; i < 10  ; i = i + 1) rdata_ALL[i] <= 3'b000;//置为0
                cnt_boom = cnt_boom - 1;
             end
             end
             GETIN:begin
-            enboom <= 1'b0;
             rdata_ALL[y1*10 + x1] <= type;
             rdata_ALL[y2*10 + x2] <= type;
             rdata_ALL[y3*10 + x3] <= type;
@@ -130,30 +119,24 @@ module RAM(
             ref <= 19;
             end
             REFRESH: begin
-                enboom <= 1'b0;
                 if(~|ref)begin
                     refresh_done <= 1;
                     ref <= 19;
                     case(cnt)
                     0: begin
-                        cnt_score <= cnt_score;
-                        cnt_score_acc <= cnt_score_acc;
+                        cnt_score <= cnt_score;      
                     end
                     1: begin
-                        cnt_score <= cnt_score + 2;
-                        cnt_score_acc <= cnt_score_acc + 2;
+                        cnt_score <= cnt_score + 2;              
                     end
                     2: begin
-                        cnt_score <= cnt_score + 5;
-                        cnt_score_acc <= cnt_score_acc + 5;
+                        cnt_score <= cnt_score + 5;                        
                     end
                     3: begin
-                        cnt_score <= cnt_score + 8;
-                        cnt_score_acc <= cnt_score_acc + 8;
+                        cnt_score <= cnt_score + 8;                        
                     end
                     4: begin
                         cnt_score <= cnt_score + 12;
-                        cnt_score_acc <= cnt_score_acc + 12;
                     end
                     endcase
                 end
@@ -187,21 +170,20 @@ module RAM(
                 end
             end    
             WAIT: begin
-                enboom <= 1'b0;
                 if(eref) ref <= ref;
                 else ref <= ref - 1;
             end
             endcase
         end
     end
-    
+    //分数输出
     always @(*) begin
         score[4:1]=(cnt_score)%10;
         score[8:5]=(cnt_score)/10;
     end
 
     wire [1:0]next_dir;
-    assign next_dir = dir + 1;
+    assign next_dir = dir + 1;//下一个方向
 
     //五个使能信号的判断
     always @(*)begin
@@ -242,10 +224,10 @@ module RAM(
                (y3 < 19) & (~|rdata_ALL[x3 + (y3 + 1) * 10]) &   
                (y4 < 19) & (~|rdata_ALL[x4 + (y4 + 1) * 10])    
          );//下落使能
-      overflow = (|rdata_ALL[x1 + y1 * 10]) |
-                 (|rdata_ALL[x2 + y2 * 10]) |
-                 (|rdata_ALL[x3 + y3 * 10]) |   
-                 (|rdata_ALL[x4 + y4 * 10]) ;//下落使能
+      overflow = (y1 <= 2) |
+                 (y2 <= 2) |
+                 (y3 <= 2) |   
+                 (y4 <= 2) ;//下落使能
     //下落块四个方格初始化
     end
     always @(posedge clk)begin

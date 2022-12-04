@@ -9,27 +9,34 @@ module Tetris(
 
     wire [16:1]timer;
     wire fail2;
-    reg space, P, reset,ifstart;
+    reg space, P, reset, ifstart, help;
     reg [4:1]sw;
-    /*
-    reg [2:0]t;
-        reg change //change为1时交换控制权
-    always@(posedge clk, negedge rstn)begin
-        if(!rstn) t<=0;
-        if(timer=16'b0001000000000000) t<=3;
-        if(t>0) t<=t-1;
+    // /*
+    reg [3:0]t;
+    // reg change //change为1时交换控制权
+    always@(posedge clk)begin
+        if(!(rstn&reset)) t<=0;
+        else if(timer==16'b0000001000000000) t<=10;
+        else if(t>0) t<=t-1;
     end
-    */
+    reg [2:0]speedup;
+    always@(posedge clk)begin
+        if(!(rstn&reset)) speedup<=0;
+        else if(timer==16'b0000000100000000) speedup<=1;
+        else if((timer==16'b0000000000110000)&&(timer==16'b0000001000000000)) speedup<=2;
+    end
+    // */
 
     //主流程状态机
     reg [2:0]NS, CS;
     parameter  IDLE = 0,
                START = 1,
                PAUSE = 2,
-               ENDING = 3;
+               ENDING = 3,
+               MAIN   = 4;
     always @(posedge clk)begin
-        if(!rstn)begin
-            CS <= IDLE;
+        if(!(rstn&reset))begin
+            CS <= MAIN;
         end
         else begin
             CS <= NS;
@@ -38,28 +45,30 @@ module Tetris(
     always @(*)begin
         NS = CS;
         case(CS)
+        MAIN: if(space) NS = IDLE;
         IDLE: if( space 
         && timer!=0 
         ) NS = START;
         START: begin
             if(P) NS = PAUSE;
-            if(fail1|fail2) NS = ENDING;
+            if(fail1|fail2|timer==0) NS = ENDING;
         end
         PAUSE:begin
             if(space) NS = START;
         end
         ENDING:begin
-            if(!reset) NS=IDLE;
+            // if(!reset) NS=IDLE;
         end
         endcase
     end
     always @(*)begin
+        ifstart = 0;start = 0; help = 0;
         case(CS)
-        IDLE: begin ifstart=0;start = 0; end
-        START: begin ifstart=1;start = 1; end
-        PAUSE:begin ifstart=1;start = 0; end
-        ENDING:begin ifstart=1;start = 0; end
-        default: begin  ifstart = 0;start = 0; end
+        MAIN: begin help = 1; end
+        IDLE: ;
+        START: begin ifstart= 1;start = 1; end
+        PAUSE:begin ifstart= 1; help = 1; end
+        ENDING:begin ifstart= 1; end
         endcase
     end
 
@@ -209,10 +218,10 @@ module Tetris(
         .clk        (clk),
         .rstn       (reset&rstn),
         .start      (start),
-        .up         (t ? w2 : w1),//t ? w2 : w1  
-        .down       (t ? w2 : s1),//t ? w2 : s1  
-        .left       (t ? w2 : a1),//t ? w2 : a1  
-        .right      (t ? w2 : d1),//t ? w2 : d1  
+        .up         (t>0 ? w2 : w1),//t ? w2 : w1  
+        .down       (t>0 ? w2 : s1),//t ? w2 : s1  
+        .left       (t>0 ? w2 : a1),//t ? w2 : a1  
+        .right      (t>0 ? w2 : d1),//t ? w2 : d1  
         .x          (x1),
         .y          (y1),
         .refresh    (refresh1),
@@ -226,7 +235,8 @@ module Tetris(
         .el         (el1),
         .er         (er1),
         .edrop      (edrop1),
-        .overflow   (overflow1)
+        .overflow   (overflow1),
+        .speedup    (speedup)
         );
 
     player player2(
@@ -234,10 +244,10 @@ module Tetris(
         .clk        (clk),
         .rstn       (reset&rstn),
         .start      (start),//游戏运行标志
-        .up         (t ? w1 : w2),//change ? w2 : w1
-        .down       (t ? w1 : s2),//change ? w2 : s1
-        .left       (t ? w1 : a2),//change ? w2 : a1
-        .right      (t ? w1 : d2),//change ? w2 : d1
+        .up         (t>0 ? w1 : w2),//change ? w2 : w1
+        .down       (t>0 ? w1 : s2),//change ? w2 : s1
+        .left       (t>0 ? w1 : a2),//change ? w2 : a1
+        .right      (t>0 ? w1 : d2),//change ? w2 : d1
         .x          (x2),
         .y          (y2),
         .refresh    (refresh2),
@@ -251,7 +261,8 @@ module Tetris(
         .el         (el2),
         .er         (er2),
         .edrop      (edrop2),
-        .overflow   (overflow2)
+        .overflow   (overflow2),
+        .speedup    (speedup)
     );
 
 
@@ -302,7 +313,9 @@ module Tetris(
         .raddr2(raddr2),
         .rgbb(rgb),
         .boom1 (cnt_boom1),
-        .boom2 (cnt_boom2)
+        .boom2 (cnt_boom2),
+        .help  (help),
+        .t     (t)
     );
 
     MUSIC MUSIC(

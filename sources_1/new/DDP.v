@@ -4,7 +4,9 @@ module DDP(
     input rstn,ifstart,
     input pclk,
     input hen,
+    input help,
     input ven,
+    input [4:1]t,
     input fail1,fail2,
     input [5:1]x11,y11,x12,y12,x13,y13,x14,y14,
     input [5:1]type1,
@@ -18,16 +20,26 @@ module DDP(
     input [4:1]boom1,boom2,
     input [3:1]rdata1, //P1棋局
     input [3:1]rdata2, //P2棋局
+    // input [16:1]picdata,
     output reg [8:1]raddr1, //P1棋局
     output reg [8:1]raddr2, //P2棋局
     output reg [12:1]rgbb
+    // output reg [15:1]picaddr
 );
-
+    wire [16:1]picdata;
+    reg [15:1]picaddr;
     reg [12:1]rgb;
+    reg [12:1]rgbbb;
     reg [10:1]m,n,mm,nn;
-    reg [7:0]ziku[7423:0];
+    reg [7:0]ziku[10495:0];
     reg [7:0]preview[55:0];
     reg [15:0]type[27:0];
+
+    blk_mem_gen_0 blk_mem_gen_0 (
+        .clka(pclk), // input wire clka
+        .addra(picaddr), // input wire [14 : 0] addra
+        .douta(picdata) // output wire [15 : 0] douta
+    );
     always @ (posedge pclk,negedge rstn)
     begin
         if(!rstn) 
@@ -49,16 +61,21 @@ module DDP(
     
     // /*
     always @(posedge pclk)begin
-        rgbb<=rgb;
+        rgbbb<=rgb;
     end
+
+    always @(*) begin
+        rgbb=help?{picdata[16:13],picdata[11:8],picdata[5:2]}:rgbbb;
+    end
+
     always @(posedge pclk,negedge rstn) begin
     if(!rstn) 
         begin 
-            m<=0;n<=1;
+            m<=1;n<=0;
         end     
     else if(hen&&ven)    
         begin
-            if (mm=='d799&&nn=='d599) begin m=0;n=0; end
+            if (m=='d799&&n=='d599) begin m=0;n=0; end
             else if (m=='d799) begin m<=0;n<=n+1; end
             else begin m<=m+1; end
         end
@@ -66,12 +83,16 @@ module DDP(
     // */
 
     always @ (*) begin
-        raddr1=0;raddr2=0;
+        raddr1=0;raddr2=0;picaddr=0;rgb=12'h000;
         if(ven&&hen)
             begin
-                if((
+                if(help) begin 
+                    picaddr=n[10:2]*400+m[10:2];
+                end
+
+                else if(
                     m>=x11*20+160&&m<x11*20+180&&n>=y11*20+160&&n<y11*20+180||m>=x12*20+160&&m<x12*20+180&&n>=y12*20+160&&n<y12*20+180||m>=x13*20+160&&m<x13*20+180&&n>=y13*20+160&&n<y13*20+180||m>=x14*20+160&&m<x14*20+180&&n>=y14*20+160&&n<y14*20+180
-                    )&~fail1&~fail2&ifstart) begin //每行16位
+                    ) begin //每行16位
                     if(m%20==0||n%20==0||m%20==19||n%20==19)
                         rgb=12'h777;
                     else
@@ -86,10 +107,9 @@ module DDP(
                             default: rgb=12'h000;
                     endcase 
                     end
-                else 
-                if((
+                else if(
                     m>=x21*20+440&&m<x21*20+460&&n>=y21*20+160&&n<y21*20+180||m>=x22*20+440&&m<x22*20+460&&n>=y22*20+160&&n<y22*20+180||m>=x23*20+440&&m<x23*20+460&&n>=y23*20+160&&n<y23*20+180||m>=x24*20+440&&m<x24*20+460&&n>=y24*20+160&&n<y24*20+180
-                    )&~fail1&~fail2&ifstart) begin
+                    ) begin
                     if(m%20==0||n%20==0||m%20==19||n%20==19)
                         rgb=12'h777;
                     else
@@ -106,7 +126,9 @@ module DDP(
                     end
 
                 else if(m>=158&&m<362&&n>=158&&n<562)
-                    if(m>=160&&m<360&&n>=160&&n<560) //player1
+                    if(m>160&&m<360&&n>=219&&n<221)
+                        rgb=12'h777;
+                    else if(m>=160&&m<360&&n>=160&&n<560) //player1
                         begin raddr1=(n-160)/20*10+(m-160)/20;
                         if((m%20==0||n%20==0||m%20==19||n%20==19)&&rdata1)
                             rgb=12'h777;
@@ -123,8 +145,11 @@ module DDP(
                         endcase
                         end
                     else rgb=12'hFFF;
+
                 else if(m>=438&&m<642&&n>=158&&n<562) //player2
-                    if(m>=440&&m<640&&n>=160&&n<560)
+                    if(m>440&&m<640&&n>=219&&n<221)
+                        rgb=12'h777;
+                    else if(m>=440&&m<640&&n>=160&&n<560)
                         begin raddr2=(n-160)/20*10+(m-440)/20; 
                         if((m%20==0||n%20==0||m%20==19||n%20==19)&&rdata2)
                             rgb=12'h777;
@@ -206,45 +231,53 @@ module DDP(
 
                 else if(m>=158&&m<642&&n>=46&&n<114)
 
-                if(fail2||timer==0&&score1>score2&&ifstart) 
+                    if(fail2||timer==0&&score1>score2) 
+                    
+                        // if(m>=160&&m<640&&n>=48&&n<112)
+                        if(m>=288&&m<320&&n>=48&&n<112) //32*64
+                            begin rgb=ziku[5376+(n-48)*4+(m-288)/8][7-(m-288)%8]?12'h000:12'hFFF; end
+                        else if(m>=320&&m<352&&n>=48&&n<112) //32*64
+                            begin rgb=ziku[512+(n-48)*4+(m-320)/8][7-(m-320)%8]?12'h000:12'hFFF; end
+                        else if(m>=352&&m<512&&n>=48&&n<112) //160*64
+                            begin rgb=ziku[5376+256+(n-48)*20+(m-352)/8][7-(m-352)%8]?12'h000:12'hFFF; end
+                        // else rgb=12'h000;
+                        else rgb=12'hFFF;
                 
-                // if(m>=160&&m<640&&n>=48&&n<112)
-                if(m>=288&&m<320&&n>=48&&n<112) //32*64
-                    begin rgb=ziku[5376+(n-48)*4+(m-288)/8][7-(m-288)%8]?12'h000:12'hFFF; end
-                else if(m>=320&&m<352&&n>=48&&n<112) //32*64
-                    begin rgb=ziku[512+(n-48)*4+(m-320)/8][7-(m-320)%8]?12'h000:12'hFFF; end
-                else if(m>=352&&m<512&&n>=48&&n<112) //160*64
-                    begin rgb=ziku[5376+256+(n-48)*20+(m-352)/8][7-(m-352)%8]?12'h000:12'hFFF; end
-                // else rgb=12'h000;
-                else rgb=12'hFFF;
+                    else if(fail1||timer==0&&score2>score1)
                 
-                else if(fail1||timer==0&&score1>=score2&&ifstart)
-                
-                // if(m>=160&&m<640&&n>=48&&n<112)
-                if(m>=288&&m<320&&n>=48&&n<112) //32*64
-                    begin rgb=ziku[5376+(n-48)*4+(m-288)/8][7-(m-288)%8]?12'h000:12'hFFF; end
-                else if(m>=320&&m<352&&n>=48&&n<112) //32*64
-                    begin rgb=ziku[768+(n-48)*4+(m-320)/8][7-(m-320)%8]?12'h000:12'hFFF; end
-                else if(m>=352&&m<512&&n>=48&&n<112) //160*64
-                    begin rgb=ziku[5376+256+(n-48)*20+(m-352)/8][7-(m-352)%8]?12'h000:12'hFFF; end
-                // else rgb=12'h000;
-                else rgb=12'hFFF;
+                        // if(m>=160&&m<640&&n>=48&&n<112)
+                        if(m>=288&&m<320&&n>=48&&n<112) //32*64
+                            begin rgb=ziku[5376+(n-48)*4+(m-288)/8][7-(m-288)%8]?12'h000:12'hFFF; end
+                        else if(m>=320&&m<352&&n>=48&&n<112) //32*64
+                            begin rgb=ziku[768+(n-48)*4+(m-320)/8][7-(m-320)%8]?12'h000:12'hFFF; end
+                        else if(m>=352&&m<512&&n>=48&&n<112) //160*64
+                            begin rgb=ziku[5376+256+(n-48)*20+(m-352)/8][7-(m-352)%8]?12'h000:12'hFFF; end
+                        else rgb=12'hFFF;
+                        // else rgb=12'h000;
 
-                else                
-                if(m>=160&&m<416&&n>=48&&n<112) //title1 256*64
-                    begin rgb=ziku[3072+(n-48)*32+(m-160)/8][7-(m-160)%8]?12'hFFF:12'h000; end
-                else if(m>=416&&m<480&&n>=48&&n<112) rgb=12'h000;
-                else if(m>=480&&m<512&&n>=48&&n<112) //title20 32*64
-                    begin rgb=ziku[256+timer[16:13]*256+(n-48)*4+(m-480)/8][7-(m-480)%8]?12'hFFF:12'h000; end
-                else if(m>=512&&m<544&&n>=48&&n<112) //title21 32*64
-                    begin rgb=ziku[256+timer[12:9]*256+(n-48)*4+(m-512)/8][7-(m-512)%8]?12'hFFF:12'h000; end
-                else if(m>=544&&m<576&&n>=48&&n<112) //title22 32*64
-                    begin rgb=ziku[256+10*256+(n-48)*4+(m-544)/8][7-(m-544)%8]?12'hFFF:12'h000; end
-                else if(m>=576&&m<608&&n>=48&&n<112) //title23 32*64
-                    begin rgb=ziku[256+timer[8:5]*256+(n-48)*4+(m-576)/8][7-(m-576)%8]?12'hFFF:12'h000; end
-                else if(m>=608&&m<640&&n>=48&&n<112) //title24 32*64
-                    begin rgb=ziku[256+timer[4:1]*256+(n-48)*4+(m-608)/8][7-(m-608)%8]?12'hFFF:12'h000; end
-                else rgb=12'hFFF;
+                    else if(timer==0&&score1==score2)
+                    
+                        // if(m>=160&&m<640&&n>=48&&n<112)
+                        if(m>=416&&m<544&&n>=48&&n<112) //32*64
+                            begin rgb=ziku[7423+(n-48)*16+(m-416)/8][7-(m-416)%8]?12'h000:12'hFFF; end
+                        else rgb=12'hFFF;
+
+                    // else rgb=12'hFFF;
+
+                    else if(m>=160&&m<416&&n>=48&&n<112) //title1 256*64
+                        begin rgb=ziku[(t>0?8448:3072)+(n-48)*32+(m-160)/8][7-(m-160)%8]?12'hFFF:12'h000; end
+                    else if(m>=416&&m<480&&n>=48&&n<112) rgb=12'h000;
+                    else if(m>=480&&m<512&&n>=48&&n<112) //title20 32*64
+                        begin rgb=ziku[256+t>0?0:timer[16:13]*256+(n-48)*4+(m-480)/8][7-(m-480)%8]?12'hFFF:12'h000; end
+                    else if(m>=512&&m<544&&n>=48&&n<112) //title21 32*64
+                        begin rgb=ziku[256+t>0?0:timer[12:9]*256+(n-48)*4+(m-512)/8][7-(m-512)%8]?12'hFFF:12'h000; end
+                    else if(m>=544&&m<576&&n>=48&&n<112) //title22 32*64
+                        begin rgb=ziku[256+10*256+(n-48)*4+(m-544)/8][7-(m-544)%8]?12'hFFF:12'h000; end
+                    else if(m>=576&&m<608&&n>=48&&n<112) //title23 32*64
+                        begin rgb=ziku[256+(t>0?(t/10):timer[8:5])*256+(n-48)*4+(m-576)/8][7-(m-576)%8]?12'hFFF:12'h000; end
+                    else if(m>=608&&m<640&&n>=48&&n<112) //title24 32*64
+                        begin rgb=ziku[256+(t>0?(t%10):timer[4:1])*256+(n-48)*4+(m-608)/8][7-(m-608)%8]?12'hFFF:12'h000; end
+                    else rgb=12'hFFF;
 
                 else if(m>=88&&m<152&&n>=288&&n<352)
                 begin rgb=ziku[6912+(n-288)*8+(m-88)/8][7-(m-88)%8]?12'hFFF:12'h000; end
@@ -253,10 +286,10 @@ module DDP(
                 begin rgb=ziku[6912+(n-288)*8+(m-648)/8][7-(m-648)%8]?12'hFFF:12'h000; end 
 
                 else if(m>=104&&m<136&&n>=368&&n<432)
-                begin rgb=ziku[boom1*256+256+(n-368)*8+(m-104)/8][7-(m-104)%8]?12'hFFF:12'h000; end
+                begin rgb=ziku[boom1*256+256+(n-368)*4+(m-104)/8][7-(m-104)%8]?12'hFFF:12'h000; end
 
                 else if(m>=664&&m<696&&n>=368&&n<432)
-                begin rgb=ziku[boom2*256+256+(n-368)*8+(m-664)/8][7-(m-664)%8]?12'hFFF:12'h000; end
+                begin rgb=ziku[boom2*256+256+(n-368)*4+(m-664)/8][7-(m-664)%8]?12'hFFF:12'h000; end
 
                 else rgb=12'h000;//background
             end

@@ -3,7 +3,7 @@ module player(
     input up, down, left, right,
     input refresh_done,//底部块消除完成标志
     input eu, ed, el, er, edrop, overflow,
-    input [2:0]rand,
+    input [2:0]rand, speedup,
     output reg [4:0]x, y,//当前块坐标
     output reg [2:0]type,
     output reg [1:0]dir,
@@ -24,23 +24,34 @@ module player(
         drop<=drop;
         fast_drop<=fast_drop;
         if(start)begin
-            drop <= (drop == 200000000) ?0:(drop + 1);
-            fast_drop <= (fast_drop == 40000000) ?0:(fast_drop + 1);
+            case(speedup)
+            0:begin
+            drop <= (drop == 50000000) ?0:(drop + 1);
+            fast_drop <= (fast_drop == 10000000) ?0:(fast_drop + 1);
+            end
+            1:begin
+            drop <= (drop == 30000000) ?0:(drop + 1);
+            fast_drop <= (fast_drop == 6000000) ?0:(fast_drop + 1);
+            end
+            2:begin
+            drop <= (drop == 10000000) ?0:(drop + 1);
+            fast_drop <= (fast_drop == 2000000) ?0:(fast_drop + 1);
+            end            endcase
         end
-        if((mode) ? (~|fast_drop) : (~|drop))begin//mode为1：快速下落使能
+        if((mode) ? (~|fast_drop) : (~|drop))begin//mode为1：快速下落使能，mode为0，普通下落使能
             if(!edrop)begin//如果不能下落
-                if(overflow)begin//如果溢出
+                if(overflow)begin//如果溢出，则失败
                     fail <= 1;
                 end
-                else begin//否则刷新底部块
+                else begin//如果未溢出，控制RAM刷新底部块
                     refresh <= 1;
                 end
             end
-            else begin
+            else begin//如果可以下落，则正常下落
                 y <= y + 1;//正常下落
             end
-        end//块下落
-        else if(start)begin
+        end
+        else if(start)begin//只有未失败状态才可以操作
             if(refresh_done)begin//底部刷新完成
                 x <= 3;
                 y <= 0;
@@ -62,17 +73,17 @@ module player(
                 x <= x + 1;
             end
         end
-        if(!rstn)begin
-            refresh <= 0;
-            fail <= 0;
-            type <= 5;
-            dir  <= 3;
-            x <= 3;
-            y <= 0;
-            mode<=0;
-            drop<=1;
-            fast_drop<=1;
-            next_type <= rand % 7 + 1;
-        end
+    if(!rstn)begin
+        refresh <= 0;
+        fail <= 0;
+        type <= 3;
+        dir  <= 3;
+        x <= 3;
+        y <= 0;
+        mode<=0;
+        drop<=1;
+        fast_drop<=1;
+        next_type <= 5;
+    end
     end
 endmodule
