@@ -99,7 +99,9 @@ module DDP(
                     else begin picaddr1=n*800+m; end
                 end
 
-                else if(
+                else begin
+                
+                if(
                     m>=x11*20+160&&m<x11*20+180&&n>=y11*20+160&&n<y11*20+180||m>=x12*20+160&&m<x12*20+180&&n>=y12*20+160&&n<y12*20+180||m>=x13*20+160&&m<x13*20+180&&n>=y13*20+160&&n<y13*20+180||m>=x14*20+160&&m<x14*20+180&&n>=y14*20+160&&n<y14*20+180
                     ) begin //每行16位
                     if(m%20==0||n%20==0||m%20==19||n%20==19)
@@ -307,6 +309,7 @@ module DDP(
                 begin rgb=ziku[boom2*256+256+(n-368)*4+(m-664)/8][7-(m-664)%8]?12'hFFF:12'h000; end
 
                 else rgb=12'h000;//background
+                end
             end
         else rgb=12'h000;
     end
