@@ -25,22 +25,16 @@ module RAM(
     integer i = 0;
     reg enboom;
     reg [2:0]rdata_ALL [199:0];//200个数据点，每个数据点12位存储RGB 为空时存储fff(黑色000)
-    always@(posedge clk)begin
-       if(boom && enboom)begin//消去最下层的三行
-       for(i = 199 ; i >= 30 ; i = i - 1) rdata_ALL[i] <= rdata_ALL[i-30];
-       for(i = 0   ; i < 30  ; i = i + 1) rdata_ALL[i] <= 3'b000;//置为0
-          cnt_boom = cnt_boom - 1;
-       end
-    end
+
     
     reg [6:0]cnt_score_acc;//累计得分，用于计算道具个数
-     always@(posedge clk)begin
-        if(cnt_score_acc >= 10) begin
-           cnt_boom <= cnt_boom + 1;
-           cnt_score_acc <= cnt_score_acc - 10;       
-        end
-     end
-    //
+    //  always@(posedge clk)begin
+    //     if(cnt_score_acc >= 10) begin
+    //        cnt_boom <= cnt_boom + 1;
+    //        cnt_score_acc <= cnt_score_acc - 10;       
+    //     end
+    //  end
+    // //
 
     
     
@@ -112,13 +106,22 @@ module RAM(
         if(!rstn)begin
             ref <= 19;
             cnt_score <= 0;
+            cnt_boom <= 5;
             for(i = 0; i < 200;i = i + 1)
                 rdata_ALL[i] <= 0;
         end
         else begin
             case(CS)
-            GETIN:begin
+            IDLE: begin
             enboom <= 1'b1;
+            if(boom && enboom && (cnt_boom > 0))begin//消去最下层的三行
+               for(i = 199 ; i >= 30 ; i = i - 1) rdata_ALL[i] <= rdata_ALL[i-30];
+               for(i = 0   ; i < 30  ; i = i + 1) rdata_ALL[i] <= 3'b000;//置为0
+               cnt_boom = cnt_boom - 1;
+            end
+            end
+            GETIN:begin
+            enboom <= 1'b0;
             rdata_ALL[y1*10 + x1] <= type;
             rdata_ALL[y2*10 + x2] <= type;
             rdata_ALL[y3*10 + x3] <= type;

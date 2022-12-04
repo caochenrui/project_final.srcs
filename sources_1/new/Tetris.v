@@ -300,7 +300,7 @@ module Tetris(
         .rdata2(rdata2),
         .raddr1(raddr1),
         .raddr2(raddr2),
-        .rgb(rgb),
+        .rgbb(rgb),
         .boom1 (cnt_boom1),
         .boom2 (cnt_boom2)
     );

@@ -20,10 +20,11 @@ module DDP(
     input [3:1]rdata2, //P2棋局
     output reg [8:1]raddr1, //P1棋局
     output reg [8:1]raddr2, //P2棋局
-    output reg [12:1]rgb
+    output reg [12:1]rgbb
 );
 
-    reg [10:1]m,n;
+    reg [12:1]rgb;
+    reg [10:1]m,n,mm,nn;
     reg [7:0]ziku[7423:0];
     reg [7:0]preview[55:0];
     reg [15:0]type[27:0];
@@ -31,20 +32,39 @@ module DDP(
     begin
         if(!rstn) 
         begin 
-            m<=0;n<=0; 
+            mm<=0;nn<=0; 
             $readmemh("./ziku copy.COE",ziku);
             $readmemb("./preview copy.COE",preview);
             $readmemb("./28 copy.COE",type);
         end
         else if(hen&&ven) 
         begin
-            if (m=='d799&&n=='d599) begin m<=0;n<=0; end
+            if (mm=='d799&&nn=='d599) begin mm<=0;nn<=0; end
+            else if (mm=='d799) begin mm<=0;nn<=nn+1; end
+            else begin mm<=mm+1; end
+        end
+    end
+    
+
+    
+    // /*
+    always @(posedge pclk)begin
+        rgbb<=rgb;
+    end
+    always @(posedge pclk,negedge rstn) begin
+    if(!rstn) 
+        begin 
+            m<=0;n<=1;
+        end     
+    else if(hen&&ven)    
+        begin
+            if (mm=='d799&&nn=='d599) begin m=0;n=0; end
             else if (m=='d799) begin m<=0;n<=n+1; end
             else begin m<=m+1; end
         end
     end
-    
-    reg [3:1]rgbb;
+    // */
+
     always @ (*) begin
         raddr1=0;raddr2=0;
         if(ven&&hen)

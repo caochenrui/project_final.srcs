@@ -24,8 +24,8 @@ module player(
         drop<=drop;
         fast_drop<=fast_drop;
         if(start)begin
-            drop <= (drop == 50000000) ?0:(drop + 1);
-            fast_drop <= (fast_drop == 10000000) ?0:(fast_drop + 1);
+            drop <= (drop == 200000000) ?0:(drop + 1);
+            fast_drop <= (fast_drop == 40000000) ?0:(fast_drop + 1);
         end
         if((mode) ? (~|fast_drop) : (~|drop))begin//mode为1：快速下落使能
             if(!edrop)begin//如果不能下落
