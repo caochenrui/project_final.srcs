@@ -13,17 +13,27 @@ module Tetris(
     reg [4:1]sw;
     // /*
     reg [3:0]t;
-    // reg change //change为1时交换控制权
+    reg [16:1]tt;
+    // always @ (posedge clk) begin
+    //     if(!(rstn&reset)) begin tt<=50000000; end
+    //     else if(start&&t!=0) begin
+    //         if(tt!=0) begin tt<=tt-1; end
+    //         else begin t<=t-1;tt<=50000000; end
+    //     end
+    // end
     always@(posedge clk)begin
-        if(!(rstn&reset)) t<=0;
-        else if(timer==16'b0000001000000000) t<=10;
-        else if(t>0) t<=t-1;
+        tt<=timer;
+        if(!(rstn&reset)) begin t<=0; tt<=0; end
+        else if(timer[8:1]==8'b00000000&&start) t<=5;
+        else if(tt!=timer&&t>0) t<=t-1;
     end
+
     reg [2:0]speedup;
     always@(posedge clk)begin
+        speedup <= speedup;
         if(!(rstn&reset)) speedup<=0;
-        else if(timer==16'b0000000100000000) speedup<=1;
-        else if((timer==16'b0000000000110000)&&(timer==16'b0000001000000000)) speedup<=2;
+        else if(timer==16'b0000000100000000&&start) speedup<=1;
+        else if(timer==16'b0000000000110000&&start) speedup<=2;
     end
     // */
 
@@ -219,9 +229,9 @@ module Tetris(
         .rstn       (reset&rstn),
         .start      (start),
         .up         (t>0 ? w2 : w1),//t ? w2 : w1  
-        .down       (t>0 ? w2 : s1),//t ? w2 : s1  
-        .left       (t>0 ? w2 : a1),//t ? w2 : a1  
-        .right      (t>0 ? w2 : d1),//t ? w2 : d1  
+        .down       (t>0 ? s2 : s1),//t ? w2 : s1  
+        .left       (t>0 ? a2 : a1),//t ? w2 : a1  
+        .right      (t>0 ? d2 : d1),//t ? w2 : d1  
         .x          (x1),
         .y          (y1),
         .refresh    (refresh1),
@@ -245,9 +255,9 @@ module Tetris(
         .rstn       (reset&rstn),
         .start      (start),//游戏运行标志
         .up         (t>0 ? w1 : w2),//change ? w2 : w1
-        .down       (t>0 ? w1 : s2),//change ? w2 : s1
-        .left       (t>0 ? w1 : a2),//change ? w2 : a1
-        .right      (t>0 ? w1 : d2),//change ? w2 : d1
+        .down       (t>0 ? s1 : s2),//change ? w2 : s1
+        .left       (t>0 ? a1 : a2),//change ? w2 : a1
+        .right      (t>0 ? d1 : d2),//change ? w2 : d1
         .x          (x2),
         .y          (y2),
         .refresh    (refresh2),

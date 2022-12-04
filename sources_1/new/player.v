@@ -12,7 +12,8 @@ module player(
 );
     reg mode;//速降模式和普通模式
     // next_dir <= dir + 1;//后面得改，先用这个试试 
-    reg [26:0]drop, fast_drop;
+    reg [25:0]drop, fast_drop;
+    reg [2:0]rspeedup;
     always @(posedge clk)begin
         fail <= fail;
         refresh <= 0;
@@ -23,20 +24,28 @@ module player(
         mode <= mode;
         drop<=drop;
         fast_drop<=fast_drop;
+        rspeedup<=speedup;
         if(start)begin
-            case(speedup)
-            0:begin
-            drop <= (drop == 50000000) ?0:(drop + 1);
-            fast_drop <= (fast_drop == 10000000) ?0:(fast_drop + 1);
+            if(rspeedup!=speedup)begin
+                drop<=1;
+                fast_drop<=1;
             end
-            1:begin
-            drop <= (drop == 30000000) ?0:(drop + 1);
-            fast_drop <= (fast_drop == 6000000) ?0:(fast_drop + 1);
+            else begin
+                case(speedup)
+                    0:begin
+                    drop <= (drop == 50000000) ?0:(drop + 1);
+                    fast_drop <= (fast_drop == 10000000) ?0:(fast_drop + 1);
+                    end
+                    1:begin
+                    drop <= (drop == 30000000) ?0:(drop + 1);
+                    fast_drop <= (fast_drop == 6000000) ?0:(fast_drop + 1);
+                    end
+                    2:begin
+                    drop <= (drop == 5000000) ?0:(drop + 1);
+                    fast_drop <= (fast_drop == 1000000) ?0:(fast_drop + 1);
+                    end
+                endcase
             end
-            2:begin
-            drop <= (drop == 10000000) ?0:(drop + 1);
-            fast_drop <= (fast_drop == 2000000) ?0:(fast_drop + 1);
-            end            endcase
         end
         if((mode) ? (~|fast_drop) : (~|drop))begin//mode为1：快速下落使能，mode为0，普通下落使能
             if(!edrop)begin//如果不能下落

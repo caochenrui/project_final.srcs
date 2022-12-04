@@ -12,7 +12,6 @@ module TIMER(
             if(t!=0) begin t<=t-1; end
             else begin timerr<=timerr-1;t<=50000000; end
         end
-        
     end
 
     always @(*) begin
