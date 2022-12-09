@@ -114,10 +114,10 @@ module Tetris(
                     8'h1C: begin a1<=1; end//A
                     8'h1B: begin s1<=1; end//S
                     8'h23: begin d1<=1; end//D
-                    8'h75: if (key_event[9]) begin w2<=1; end//↑上下左坳带剝缀E0
-                    8'h6B: if (key_event[9]) begin a2<=1; end//�?
-                    8'h72: if (key_event[9]) begin s2<=1; end//�?
-                    8'h74: if (key_event[9]) begin d2<=1; end//�?
+                    8'h75: if (key_event[9]) begin w2<=1; end//↑
+                    8'h6B: if (key_event[9]) begin a2<=1; end//←
+                    8'h72: if (key_event[9]) begin s2<=1; end//↓
+                    8'h74: if (key_event[9]) begin d2<=1; end//→
                     // 8'h3A: begin music<=~music; end//M
                     8'h4D: begin P<=1; end//P pause
                     8'h29: begin space<=1; end//space
@@ -331,6 +331,7 @@ module Tetris(
     MUSIC MUSIC(
         .clk(clk),
         .start(start),
+        .speedup(speedup),
         .rstn(reset&rstn),            
         .B(pwm)
     );
